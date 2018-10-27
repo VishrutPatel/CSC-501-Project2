@@ -45,7 +45,125 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 
+struct Node{
+	int pid;
+	struct task_struct *process;
+	struct Node* next;
+}
 
+struct Container{
+	u64 cid;
+	struct Container* next;
+	struct Node *head;
+}
+
+struct ContainerList{
+	struct Container *head;
+}
+
+struct ContainerList containerArray;
+
+static DEFINE_MUTEX(containerMutex);
+
+struct Container* checkIfContainerExist(u64 cid){
+	struct Container *iterator = containerArray.head;
+	while(iterator != NULL){
+		if(iterator->cid == cid){
+			return(iterator);
+		}
+		iterator = iterator->next;
+	}
+	return(NULL);
+}
+
+struct Node* createNode(int pid, struct task_struct *processStruct){
+	struct Node *taskToAdd;
+	taskToAdd = kmalloc(sizeof(struct Node), GFP_KERNEL);
+	taskToAdd->pid = pid;
+	taskToAdd->process = processStruct;
+	taskToAdd->next = NULL;
+	return(taskToAdd);
+}
+
+int addNodeToContainer(struct Container* containerToAdd, struct Node* nextTask){
+	struct Node* iterator = containerToAdd->head;
+	while(iterator->next!=NULL){
+		iterator = iterator->next;
+	}
+	iterator->next = nextTask;
+	return(1);
+}
+
+struct Container* createContainer(u64 cid){
+	struct Container *newContainer;
+	newContainer = kmalloc(sizeof(struct Container), GFP_KERNEL);
+	newContainer->cid = cid;
+	newContainer->next = NULL;
+	newContainer->head = NULL;
+	return(newContainer);
+}
+
+int addContainerToList(struct Container* newContainer){
+	struct Container* iterator = containerArray.head;
+	while(iterator->next != NULL){
+		iterator = iterator->next;
+	}
+	iterator->next = newContainer;
+	return(1);
+}
+
+int deleteTaskFromContainer(int pid, struct Container* containsTask){
+	struct Node* iterator = containsTask->head;
+	struct Node* previous = NULL;
+	while(iterator->pid != pid && iterator!=NULL){
+		previous = iterator;
+		iterator = iterator->next;
+	}
+	if(previous == NULL && iterator->pid == pid){
+		containsTask->head = iterator->next;	
+	}else{ 
+		previous->next = iterator->next;
+	}
+	kfree((void *)iterator);
+	return(1);
+}
+
+int deleteContainer(u64 cid){
+	struct Container* iterator = containerArray.head;
+	struct Container* previous = NULL;
+	while(iterator->cid != cid && iterator !=NULL){
+		previous = iterator;
+		iterator = iterator->next;
+	}
+	if(previous == NULL && iterator->cid == cid){
+		containerArray.head = iterator->next;
+	}else{
+		previous->next = iterator->next;
+	}
+	kfree((void *)iterator);
+}
+
+int checkIfEmptyContainer(struct Container* emptyContainer){
+	if(emptyContainer->head == NULL){
+		return(1);
+	}
+	return(0);
+}
+
+struct Container* getContainerOfTask(int pid){
+	struct Container* iteratorContainer = containerArray.head;
+	while(iteratorContainer != NULL){
+		struct Node* iteratorNode = iteratorContainer->head;
+		while(iteratorNode != NULL){
+			if(iteratorNode->pid == pid){
+				return(iteratorContainer);
+			}
+			iteratorNode = iteratorNode->next;
+		}
+		iteratorContainer = iteratorContainer->next;
+	}
+	return(NULL);
+}
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
     return 0;
@@ -66,13 +184,35 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 
 int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 {
-    return 0;
+	mutex_lock(&containerMutex);
+	struct memory_container_cmd* mcontainer;
+	mcontainer = kmalloc(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	long val = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	struct Container* containerOfTask = getContainerOfTask(current->pid);
+	int n = deleteTaskFromContainer(current->pid, containerOfTask);
+	if(checkIfEmptyContainer(containerOfTask) == 1){
+		deleteContainer(mcontainer->cid);
+	}
+	mutex_unlock(&containerMutex);
+	return 0;
 }
 
 
 int memory_container_create(struct memory_container_cmd __user *user_cmd)
 {
-    return 0;
+	mutex_lock(&containerMutex);
+	struct memory_container_cmd* mcontainer;
+	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
+	long val = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	struct Container* containerExist = checkIfContainerExist(mcontainer->cid);
+	if(containerExist == NULL){
+		containerExist = createContainer(mcontainer->cid);
+		addContainerToList(containerExist);
+	}
+	struct Node* newNode = createNode(current->pid, current);
+	addNodeToContainer(containerExist, newNode);
+	mutex_unlock(&containerMutex);
+    	return 0;
 }
 
 
