@@ -55,10 +55,18 @@ struct Container{
 	u64 cid;
 	struct Container* next;
 	struct Node *head;
+	struct MemoryObject* memoryHead;
 }
 
 struct ContainerList{
 	struct Container *head;
+}
+
+struct MemoryObject{
+	long objectId;
+	struct MemoryObject* next;
+	int lockStatus;
+	char* memoryStart;
 }
 
 struct ContainerList containerArray;
@@ -164,21 +172,54 @@ struct Container* getContainerOfTask(int pid){
 	}
 	return(NULL);
 }
+
+struct MemoryObject* getContainerMemoryObject(struct Container* containerTC, long oid){
+	struct MemoryObject* iterator = containerTC->memoryHead;
+	while(iterator!=NULL){
+		if(iterator->objectId == oid){
+			return(iterator);
+		}
+		iterator = iterator->next;
+	}
+	return(NULL);
+}
+
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-    return 0;
+	mutex_lock(&container_mutex);
+	struct vm_area_struct* vmArea = kmalloc(sizeof(struct vm_area_struct),GFP_KERNEL);
+	long cd = copy_from_user(vmArea, vma, sizeof(struct vm_area_struct));
+	struct file* userFile = kmalloc(sizeof(struct file),GFP_KERNEL);
+	long ab = copy_from_user(userFile, filp, sizeof(struct file));
+	//char* startAddress = kmalloc(vm_end-vm_start, GFP_KERNEL);
+	//struct MemoryObject obj; 
+	mutex_unlock(&container_mutex);
+    	return 0;
 }
 
 
 int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
-    return 0;
+	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
+	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	struct Container* containerMemory = checkIfContainerExist(mcontainer->cid);
+	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
+	while(memObj->lockStatus == 1){
+		
+	}
+	memObj->lockStatus = 1;
+	return 0;
 }
 
 
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
-    return 0;
+	struct memory_container_cmd* mcontainer = kmalloc(sizeof(memory_container_cmd), GFP_KERNEL);
+	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	struct Container* memoryContainer = checkIfContainerExist(mcontainer->head);
+	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
+	memObj->lockStatus = 0;
+	return 0;
 }
 
 
@@ -186,8 +227,8 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 {
 	mutex_lock(&containerMutex);
 	struct memory_container_cmd* mcontainer;
-	mcontainer = kmalloc(mcontainer, user_cmd, sizeof(memory_container_cmd));
-	long val = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
+	long val = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* containerOfTask = getContainerOfTask(current->pid);
 	int n = deleteTaskFromContainer(current->pid, containerOfTask);
 	if(checkIfEmptyContainer(containerOfTask) == 1){
@@ -203,7 +244,7 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 	mutex_lock(&containerMutex);
 	struct memory_container_cmd* mcontainer;
 	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
-	long val = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	long val = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* containerExist = checkIfContainerExist(mcontainer->cid);
 	if(containerExist == NULL){
 		containerExist = createContainer(mcontainer->cid);
@@ -218,7 +259,13 @@ int memory_container_create(struct memory_container_cmd __user *user_cmd)
 
 int memory_container_free(struct memory_container_cmd __user *user_cmd)
 {
-    return 0;
+	mutex_lock(&containerMutex);
+	struct memory_container_cmd* mcontainer;
+	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
+	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
+	
+	mutex_unlock(&contaienrMutex);
+	return 0;
 }
 
 
