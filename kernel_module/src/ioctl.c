@@ -63,7 +63,7 @@ struct ContainerList{
 }
 
 struct MemoryObject{
-	long objectId;
+	unsigned long objectId;
 	struct MemoryObject* next;
 	int lockStatus;
 	char* memoryStart;
@@ -184,6 +184,44 @@ struct MemoryObject* getContainerMemoryObject(struct Container* containerTC, lon
 	return(NULL);
 }
 
+struct MemoryObject* createMemoryObject(unsigned long objSize,unsigned long objectId){
+	char* memoryPtr = (char *)kmalloc(objSize, GFP_KERNEL);
+	struct MemoryObject* obj = kmalloc(sizeof(struct MemoryObject), GFP_KERNEL);
+	obj->objectId = objectId;
+	obj->next = NULL;
+	obj->lockStatus = 0;
+	obj->memoryStart = memoryPtr;
+	return(obj);
+}
+
+int removeObject(struct Container* container, unsigned long oid){
+	struct MemoryObject* iterator = container->memoryHead;
+	struct MemoryObject* previous = NULL;
+	while(iterator!=NULL){
+		if(iterator->objectId == oid){
+			break;
+		}
+		previous = iterator;
+		iterator = iterator->next;
+	}
+	if(previous==NULL && iterator->objectId == oid){
+		container->memoryHead = iterator->next;
+	}else{
+		previous->next = iterator->next;
+	}
+	kfree((void *)iterator);
+	return(NULL);
+}
+
+int addMemoryToContainer(struct Container* container, struct MemoryObject* memory){
+	struct MemoryObject* iterator = container->memoryHead;
+	while(iterator->next != NULL){
+		iterator = iterator->next;
+	}
+	iterator->next = memory;
+	return(1);
+}
+
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	mutex_lock(&container_mutex);
@@ -192,7 +230,14 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	struct file* userFile = kmalloc(sizeof(struct file),GFP_KERNEL);
 	long ab = copy_from_user(userFile, filp, sizeof(struct file));
 	//char* startAddress = kmalloc(vm_end-vm_start, GFP_KERNEL);
-	//struct MemoryObject obj; 
+	//struct MemoryObject obj;
+	unsigned long sizeNo = vmArea->vm_start - vmArea->vm_end;
+	unsigned long objSize = sizeNo*sizeof(char);
+	unsigned long objectId = vmArea->vm_pgoff;
+	struct MemoryObject* obj = createMemoryObject(objSize, objectId);
+	struct Container* currentContainer = getContainerOfTask(current->pid);
+	addMemoryToContainer(currentContainer, obj);
+	virt_to_phys();
 	mutex_unlock(&container_mutex);
     	return 0;
 }
@@ -202,7 +247,7 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
 	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
-	struct Container* containerMemory = checkIfContainerExist(mcontainer->cid);
+	struct Container* containerMemory = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
 	while(memObj->lockStatus == 1){
 		
@@ -216,7 +261,7 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
 	struct memory_container_cmd* mcontainer = kmalloc(sizeof(memory_container_cmd), GFP_KERNEL);
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
-	struct Container* memoryContainer = checkIfContainerExist(mcontainer->head);
+	struct Container* memoryContainer = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
 	memObj->lockStatus = 0;
 	return 0;
@@ -263,7 +308,8 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 	struct memory_container_cmd* mcontainer;
 	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
-	
+	struct Container* memoryContainer = getContainerOfTask(current->pid);
+	removeObject(memoryContainer, mcontainer->oid);
 	mutex_unlock(&contaienrMutex);
 	return 0;
 }
