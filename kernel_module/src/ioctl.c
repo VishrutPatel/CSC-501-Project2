@@ -125,6 +125,7 @@ struct Container* createContainer(u64 cid){
 	newContainer->next = NULL;
 	newContainer->head = NULL;
 	newContainer->lockStatus = 0;
+	newContainer->memoryHead = NULL;
 	printk("before return of custom method create container\n");
 	return(newContainer);
 }
@@ -213,8 +214,11 @@ struct Container* getContainerOfTask(int pid){
 	return(NULL);
 }
 
-struct MemoryObject* getContainerMemoryObject(struct Container* containerTC, long oid){
+struct MemoryObject* getContainerMemoryObject(struct Container* containerTC,unsigned long oid){
 	printk("inside custom get container memory object\n");
+	if(containerTC == NULL){
+		printk("containerwa hi khali nikla");
+	}
 	struct MemoryObject* iterator = containerTC->memoryHead;
 	while(iterator!=NULL){
 		if(iterator->objectId == oid){
@@ -266,10 +270,16 @@ int removeObject(struct Container* container, unsigned long oid){
 int addMemoryToContainer(struct Container* container, struct MemoryObject* memory){
 	printk("inside custom add memory to container function\n");
 	struct MemoryObject* iterator = container->memoryHead;
-	while(iterator->next != NULL){
+	struct MemoryObject* previous = NULL;
+	while(iterator != NULL){
+		previous = iterator;
 		iterator = iterator->next;
 	}
-	iterator->next = memory;
+	if(previous == NULL){
+		container->memoryHead = memory;
+	}else{
+		iterator->next = memory;
+	}
 	printk("before return of custom add memory to container\n");
 	return(1);
 }
@@ -289,6 +299,10 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long objectId = vmArea->vm_pgoff;
 	struct Container* currentContainer = getContainerOfTask(current->pid);
 	struct MemoryObject* objToCheck = getContainerMemoryObject(currentContainer, objectId);
+	if(objToCheck == NULL){
+		objToCheck = createMemoryObject(objectId);
+		addMemoryToContainer(currentContainer, objToCheck);
+	}
 	if(objToCheck->memoryStart == NULL){
 		printk("inside if of default memory container mmap\n");
 		objToCheck->memoryStart = (char *)kmalloc(objSize, GFP_KERNEL);	
