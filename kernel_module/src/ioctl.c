@@ -67,7 +67,7 @@ struct MemoryObject{
 	unsigned long objectId;
 	struct MemoryObject* next;
 	int lockStatus;
-	char* memoryStart;
+	unsigned long memoryStart;
 };
 
 struct ContainerList containerArray;
@@ -269,6 +269,7 @@ int removeObject(struct Container* container, unsigned long oid){
 
 int addMemoryToContainer(struct Container* container, struct MemoryObject* memory){
 	printk("inside custom add memory to container function\n");
+	
 	struct MemoryObject* iterator = container->memoryHead;
 	struct MemoryObject* previous = NULL;
 	while(iterator != NULL){
@@ -278,7 +279,7 @@ int addMemoryToContainer(struct Container* container, struct MemoryObject* memor
 	if(previous == NULL){
 		container->memoryHead = memory;
 	}else{
-		iterator->next = memory;
+		previous->next = memory;
 	}
 	printk("before return of custom add memory to container\n");
 	return(1);
@@ -288,15 +289,15 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	printk("inside default memory container mmap\n");
 	mutex_lock(&containerMutex);
-	struct vm_area_struct* vmArea = kmalloc(sizeof(struct vm_area_struct),GFP_KERNEL);
-	long cd = copy_from_user(vmArea, vma, sizeof(struct vm_area_struct));
-	struct file* userFile = kmalloc(sizeof(struct file),GFP_KERNEL);
-	long ab = copy_from_user(userFile, filp, sizeof(struct file));
+	//struct vm_area_struct* vmArea = kmalloc(sizeof(struct vm_area_struct),GFP_KERNEL);
+	//long cd = copy_from_user(vmArea, vma, sizeof(struct vm_area_struct));
+	//struct file* userFile = kmalloc(sizeof(struct file),GFP_KERNEL);
+	//long ab = copy_from_user(userFile, filp, sizeof(struct file));
 	//char* startAddress = kmalloc(vm_end-vm_start, GFP_KERNEL);
 	//struct MemoryObject obj;
-	unsigned long sizeNo = vmArea->vm_start - vmArea->vm_end;
+	unsigned long sizeNo = vma->vm_end - vma->vm_start;
 	unsigned long objSize = sizeNo*sizeof(char);
-	unsigned long objectId = vmArea->vm_pgoff;
+	unsigned long objectId = vma->vm_pgoff;
 	struct Container* currentContainer = getContainerOfTask(current->pid);
 	struct MemoryObject* objToCheck = getContainerMemoryObject(currentContainer, objectId);
 	if(objToCheck == NULL){
@@ -305,13 +306,13 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 	if(objToCheck->memoryStart == NULL){
 		printk("inside if of default memory container mmap\n");
-		objToCheck->memoryStart = (char *)kmalloc(objSize, GFP_KERNEL);	
+		objToCheck->memoryStart = kmalloc(objSize, GFP_KERNEL);	
 	}
 	//struct MemoryObject* obj = createMemoryObject(objSize, objectId);
 	//addMemoryToContainer(currentContainer, obj);
+	mutex_unlock(&containerMutex);
 	unsigned long pfn = virt_to_phys((void *)objToCheck->memoryStart)>>PAGE_SHIFT;
 	remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end-vma->vm_start,vma->vm_page_prot);
-	mutex_unlock(&containerMutex);
 	printk("before return of default memory container mmap\n");
     	return 0;
 }
