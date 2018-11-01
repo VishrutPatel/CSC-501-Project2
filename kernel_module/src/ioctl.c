@@ -49,25 +49,26 @@ struct Node{
 	int pid;
 	struct task_struct *process;
 	struct Node* next;
-}
+};
 
 struct Container{
 	u64 cid;
+	int lockStatus;
 	struct Container* next;
 	struct Node *head;
 	struct MemoryObject* memoryHead;
-}
+};
 
 struct ContainerList{
 	struct Container *head;
-}
+};
 
 struct MemoryObject{
 	unsigned long objectId;
 	struct MemoryObject* next;
 	int lockStatus;
 	char* memoryStart;
-}
+};
 
 struct ContainerList containerArray;
 
@@ -108,6 +109,7 @@ struct Container* createContainer(u64 cid){
 	newContainer->cid = cid;
 	newContainer->next = NULL;
 	newContainer->head = NULL;
+	newContainer->lockStatus = 0;
 	return(newContainer);
 }
 
@@ -224,7 +226,7 @@ int addMemoryToContainer(struct Container* container, struct MemoryObject* memor
 
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-	mutex_lock(&container_mutex);
+	mutex_lock(&containerMutex);
 	struct vm_area_struct* vmArea = kmalloc(sizeof(struct vm_area_struct),GFP_KERNEL);
 	long cd = copy_from_user(vmArea, vma, sizeof(struct vm_area_struct));
 	struct file* userFile = kmalloc(sizeof(struct file),GFP_KERNEL);
@@ -237,8 +239,9 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 	struct MemoryObject* obj = createMemoryObject(objSize, objectId);
 	struct Container* currentContainer = getContainerOfTask(current->pid);
 	addMemoryToContainer(currentContainer, obj);
-	virt_to_phys();
-	mutex_unlock(&container_mutex);
+	unsigned long pfn = virt_to_phys((void *)obj->memoryStart)>>PAGE_SHIFT;
+	remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end-vma->vm_start,vma->vm_page_prot);
+	mutex_unlock(&containerMutex);
     	return 0;
 }
 
@@ -246,24 +249,24 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
 	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
-	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* containerMemory = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
-	while(memObj->lockStatus == 1){
-		
+	while(containerMemory->lockStatus == 1){
+			
 	}
-	memObj->lockStatus = 1;
+	containerMemory->lockStatus = 1;
 	return 0;
 }
 
 
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
-	struct memory_container_cmd* mcontainer = kmalloc(sizeof(memory_container_cmd), GFP_KERNEL);
-	long cd = copy_from_user(mcontainer, user_cmd, sizeof(memory_container_cmd));
+	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
+	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
-	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
-	memObj->lockStatus = 0;
+	struct MemoryObject* memObj = getContainerMemoryObject(memoryContainer, mcontainer->oid);
+	memoryContainer->lockStatus = 0;
 	return 0;
 }
 
@@ -310,7 +313,7 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
 	removeObject(memoryContainer, mcontainer->oid);
-	mutex_unlock(&contaienrMutex);
+	mutex_unlock(&containerMutex);
 	return 0;
 }
 
