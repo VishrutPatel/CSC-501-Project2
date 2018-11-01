@@ -171,16 +171,18 @@ int deleteContainer(u64 cid){
 	printk("inside custom delete container\n");
 	struct Container* iterator = containerArray.head;
 	struct Container* previous = NULL;
-	while(iterator->cid != cid && iterator !=NULL){
+	while(iterator != NULL && iterator->cid != cid){
 		previous = iterator;
 		iterator = iterator->next;
 	}
 	if(previous == NULL && iterator->cid == cid){
 		printk("inside if of custom delete container\n");
 		containerArray.head = iterator->next;
-	}else{
+	}else if(iterator != NULL && iterator->cid == cid){
 		printk("inside else of custom delete container\n");
 		previous->next = iterator->next;
+	}else{
+		previous->next = NULL;
 	}
 	kfree((void *)iterator);
 	printk("before return of custom delete container\n");
@@ -346,7 +348,9 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(memoryContainer, mcontainer->oid);
-	memObj->lockStatus = 0;
+	if(memObj!=NULL){
+		memObj->lockStatus = 0;
+	}
 	printk("before return of container unlock\n");
 	return 0;
 }
