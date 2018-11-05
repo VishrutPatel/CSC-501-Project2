@@ -66,7 +66,7 @@ struct ContainerList{
 struct MemoryObject{
 	unsigned long objectId;
 	struct MemoryObject* next;
-	int lockStatus;
+	struct mutex lockStatus;
 	unsigned long memoryStart;
 };
 
@@ -239,7 +239,8 @@ struct MemoryObject* createMemoryObject(unsigned long objectId){
 	struct MemoryObject* obj = kmalloc(sizeof(struct MemoryObject), GFP_KERNEL);
 	obj->objectId = objectId;
 	obj->next = NULL;
-	obj->lockStatus = 0;
+	//obj->lockStatus = 0;
+	mutex_init(&obj->lockStatus);
 	obj->memoryStart = NULL;
 	printk("before return of custom create memory object function\n");
 	return(obj);
@@ -332,10 +333,11 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 		memObj = createMemoryObject(mcontainer->oid);
 		addMemoryToContainer(containerMemory, memObj);
 	}
-	while(memObj->lockStatus==1){
+	/*while(memObj->lockStatus==1){
 		
 	}
-	memObj->lockStatus=1;
+	memObj->lockStatus=1;*/
+	mutex_lock(&memObj->lockStatus);
 	printk("before return of default container lock\n");
 	return 0;
 }
@@ -349,7 +351,8 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(memoryContainer, mcontainer->oid);
 	if(memObj!=NULL){
-		memObj->lockStatus = 0;
+		//memObj->lockStatus = 0;
+		mutex_unlock(&memObj->lockStatus);
 	}
 	printk("before return of container unlock\n");
 	return 0;
