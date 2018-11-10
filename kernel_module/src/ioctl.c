@@ -76,34 +76,34 @@ static DEFINE_MUTEX(containerMutex);
 
 struct Container* checkIfContainerExist(u64 cid){
 	struct Container *iterator = containerArray.head;
-	printk("Check Container start\n");
+	//printk("Check Container start\n");
 	while(iterator != NULL){
 		if(iterator->cid == cid){
-			printk("check container returned with container\n");
+			//printk("check container returned with container\n");
 			return(iterator);
 		}
 		iterator = iterator->next;
 	}
-	printk("no container found\n");
+	//printk("no container found\n");
 	return(NULL);
 }
 
 struct Node* createNode(int pid, struct task_struct *processStruct){
-	printk("inside custom create node function\n");
+	//printk("inside custom create node function\n");
 	struct Node *taskToAdd;
 	taskToAdd = kmalloc(sizeof(struct Node), GFP_KERNEL);
 	taskToAdd->pid = pid;
 	taskToAdd->process = processStruct;
 	taskToAdd->next = NULL;
-	printk("before return of custom create node function\n");
+	//printk("before return of custom create node function\n");
 	return(taskToAdd);
 }
 
 int addNodeToContainer(struct Container* containerToAdd, struct Node* nextTask){
-	printk("inside custom add node to container function\n");
+	//printk("inside custom add node to container function\n");
 	struct Node* iterator = containerToAdd->head;
 	struct Node *previous = NULL;
-	printk("add node start\n");
+	//printk("add node start\n");
 	while(iterator!=NULL){
 		previous = iterator;
 		iterator = iterator->next;
@@ -113,12 +113,12 @@ int addNodeToContainer(struct Container* containerToAdd, struct Node* nextTask){
 	}else{
 		previous->next = nextTask;
 	}
-	printk("added node to container\n");
+	//printk("added node to container\n");
 	return(1);
 }
 
 struct Container* createContainer(u64 cid){
-	printk("inside custom method create container\n");
+	//printk("inside custom method create container\n");
 	struct Container *newContainer;
 	newContainer = kmalloc(sizeof(struct Container), GFP_KERNEL);
 	newContainer->cid = cid;
@@ -126,12 +126,12 @@ struct Container* createContainer(u64 cid){
 	newContainer->head = NULL;
 	newContainer->lockStatus = 0;
 	newContainer->memoryHead = NULL;
-	printk("before return of custom method create container\n");
+	//printk("before return of custom method create container\n");
 	return(newContainer);
 }
 
 int addContainerToList(struct Container* newContainer){
-	printk("inside custom add container to list\n");
+	//printk("inside custom add container to list\n");
 	struct Container* iterator = containerArray.head;
 	struct Container* previous = NULL;
 	while(iterator != NULL){
@@ -143,12 +143,12 @@ int addContainerToList(struct Container* newContainer){
 	}else{
 		previous->next = newContainer;
 	}
-	printk("before return of custom add container to list\n");
+	//printk("before return of custom add container to list\n");
 	return(1);
 }
 
 int deleteTaskFromContainer(int pid, struct Container* containsTask){
-	printk("inside custom delete task from container\n");
+	//printk("inside custom delete task from container\n");
 	struct Node* iterator = containsTask->head;
 	struct Node* previous = NULL;
 	while(iterator->pid != pid && iterator!=NULL){
@@ -156,19 +156,19 @@ int deleteTaskFromContainer(int pid, struct Container* containsTask){
 		iterator = iterator->next;
 	}
 	if(previous == NULL && iterator->pid == pid){
-		printk("inside first if of custom delete task from container\n");
+		//printk("inside first if of custom delete task from container\n");
 		containsTask->head = iterator->next;	
 	}else{ 
-		printk("inside else of custom delete task from container\n");
+		//printk("inside else of custom delete task from container\n");
 		previous->next = iterator->next;
 	}
 	kfree((void *)iterator);
-	printk("before return to custom delete task from container\n");
+	//printk("before return to custom delete task from container\n");
 	return(1);
 }
 
 int deleteContainer(u64 cid){
-	printk("inside custom delete container\n");
+	//printk("inside custom delete container\n");
 	struct Container* iterator = containerArray.head;
 	struct Container* previous = NULL;
 	while(iterator != NULL && iterator->cid != cid){
@@ -176,102 +176,102 @@ int deleteContainer(u64 cid){
 		iterator = iterator->next;
 	}
 	if(previous == NULL && iterator->cid == cid){
-		printk("inside if of custom delete container\n");
+		//printk("inside if of custom delete container\n");
 		containerArray.head = iterator->next;
 	}else if(iterator != NULL && iterator->cid == cid){
-		printk("inside else of custom delete container\n");
+		//printk("inside else of custom delete container\n");
 		previous->next = iterator->next;
 	}else{
 		previous->next = NULL;
 	}
 	kfree((void *)iterator);
-	printk("before return of custom delete container\n");
+	//printk("before return of custom delete container\n");
 }
 
 int checkIfEmptyContainer(struct Container* emptyContainer){
-	printk("inside custom check if empty conatainer\n");
+	//printk("inside custom check if empty conatainer\n");
 	if(emptyContainer->head == NULL){
-		printk("inside if of custom check if empty container\n");
+		//printk("inside if of custom check if empty container\n");
 		return(1);
 	}
-	printk("before return of custom check if empty container\n");
+	//printk("before return of custom check if empty container\n");
 	return(0);
 }
 
 struct Container* getContainerOfTask(int pid){
-	printk("inside get container of task custom\n");
+	//printk("inside get container of task custom\n");
 	struct Container* iteratorContainer = containerArray.head;
 	while(iteratorContainer != NULL){
 		struct Node* iteratorNode = iteratorContainer->head;
 		while(iteratorNode != NULL){
 			if(iteratorNode->pid == pid){
-				printk("inside if of get container of task custom\n");
+				//printk("inside if of get container of task custom\n");
 				return(iteratorContainer);
 			}
 			iteratorNode = iteratorNode->next;
 		}
 		iteratorContainer = iteratorContainer->next;
 	}
-	printk("before return of custom get container of task\n");
+	//printk("before return of custom get container of task\n");
 	return(NULL);
 }
 
 struct MemoryObject* getContainerMemoryObject(struct Container* containerTC,unsigned long oid){
-	printk("inside custom get container memory object\n");
-	if(containerTC == NULL){
-		printk("containerwa hi khali nikla");
-	}
+	//printk("inside custom get container memory object\n");
+	//if(containerTC == NULL){
+		//printk("containerwa hi khali nikla");
+	//}
 	struct MemoryObject* iterator = containerTC->memoryHead;
 	while(iterator!=NULL){
 		if(iterator->objectId == oid){
-			printk("inside if of custom get container memory object\n");
+			//printk("inside if of custom get container memory object\n");
 			return(iterator);
 		}
 		iterator = iterator->next;
 	}
-	printk("before return of custom get container memory object\n");
+	//printk("before return of custom get container memory object\n");
 	return(NULL);
 }
 
 struct MemoryObject* createMemoryObject(unsigned long objectId){
 	//char* memoryPtr = (char *)kmalloc(objSize, GFP_KERNEL);
-	printk("inside custom create memory object function\n");
+	//printk("inside custom create memory object function\n");
 	struct MemoryObject* obj = kmalloc(sizeof(struct MemoryObject), GFP_KERNEL);
 	obj->objectId = objectId;
 	obj->next = NULL;
 	//obj->lockStatus = 0;
 	mutex_init(&obj->lockStatus);
 	obj->memoryStart = NULL;
-	printk("before return of custom create memory object function\n");
+	//printk("before return of custom create memory object function\n");
 	return(obj);
 }
 
 int removeObject(struct Container* container, unsigned long oid){
-	printk("inside custom remove object function\n");
+	//printk("inside custom remove object function\n");
 	struct MemoryObject* iterator = container->memoryHead;
 	struct MemoryObject* previous = NULL;
 	while(iterator!=NULL){
 		if(iterator->objectId == oid){
-			printk("inside if of custom remove object function\n");
+			//printk("inside if of custom remove object function\n");
 			break;
 		}
 		previous = iterator;
 		iterator = iterator->next;
 	}
 	if(previous==NULL && iterator->objectId == oid){
-		printk("inside second if of custom remove object function\n");
+		//printk("inside second if of custom remove object function\n");
 		container->memoryHead = iterator->next;
 	}else{
-		printk("inside third if of custom remove object function\n");
+		//printk("inside third if of custom remove object function\n");
 		previous->next = iterator->next;
 	}
 	kfree((void *)iterator);
-	printk("before return of custom remove object function\n");
+	//printk("before return of custom remove object function\n");
 	return(NULL);
 }
 
 int addMemoryToContainer(struct Container* container, struct MemoryObject* memory){
-	printk("inside custom add memory to container function\n");
+	//printk("inside custom add memory to container function\n");
 	
 	struct MemoryObject* iterator = container->memoryHead;
 	struct MemoryObject* previous = NULL;
@@ -284,13 +284,13 @@ int addMemoryToContainer(struct Container* container, struct MemoryObject* memor
 	}else{
 		previous->next = memory;
 	}
-	printk("before return of custom add memory to container\n");
+	//printk("before return of custom add memory to container\n");
 	return(1);
 }
 
 int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-	printk("inside default memory container mmap\n");
+	//printk("inside default memory container mmap\n");
 	mutex_lock(&containerMutex);
 	//struct vm_area_struct* vmArea = kmalloc(sizeof(struct vm_area_struct),GFP_KERNEL);
 	//long cd = copy_from_user(vmArea, vma, sizeof(struct vm_area_struct));
@@ -308,28 +308,28 @@ int memory_container_mmap(struct file *filp, struct vm_area_struct *vma)
 		addMemoryToContainer(currentContainer, objToCheck);
 	}
 	if(objToCheck->memoryStart == NULL){
-		printk("inside if of default memory container mmap\n");
-		objToCheck->memoryStart = kmalloc(objSize, GFP_KERNEL);	
+		//printk("inside if of default memory container mmap\n");
+		objToCheck->memoryStart = kcalloc(sizeNo,sizeof(char), GFP_KERNEL);	
 	}
 	//struct MemoryObject* obj = createMemoryObject(objSize, objectId);
 	//addMemoryToContainer(currentContainer, obj);
 	mutex_unlock(&containerMutex);
 	unsigned long pfn = virt_to_phys((void *)objToCheck->memoryStart)>>PAGE_SHIFT;
 	remap_pfn_range(vma, vma->vm_start, pfn, vma->vm_end-vma->vm_start,vma->vm_page_prot);
-	printk("before return of default memory container mmap\n");
+	//printk("before return of default memory container mmap\n");
     	return 0;
 }
 
 
 int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("Inside container lock");
+	//printk("Inside container lock");
 	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* containerMemory = getContainerOfTask(current->pid);
 	struct MemoryObject* memObj = getContainerMemoryObject(containerMemory, mcontainer->oid);
 	if(memObj == NULL){
-		printk("inside if of default container lock\n");
+		//printk("inside if of default container lock\n");
 		memObj = createMemoryObject(mcontainer->oid);
 		addMemoryToContainer(containerMemory, memObj);
 	}
@@ -338,14 +338,14 @@ int memory_container_lock(struct memory_container_cmd __user *user_cmd)
 	}
 	memObj->lockStatus=1;*/
 	mutex_lock(&memObj->lockStatus);
-	printk("before return of default container lock\n");
+	//printk("before return of default container lock\n");
 	return 0;
 }
 
 
 int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 {
-	printk("inside container unlock");
+	//printk("inside container unlock");
 	struct memory_container_cmd* mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
 	long cd = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
@@ -354,14 +354,14 @@ int memory_container_unlock(struct memory_container_cmd __user *user_cmd)
 		//memObj->lockStatus = 0;
 		mutex_unlock(&memObj->lockStatus);
 	}
-	printk("before return of container unlock\n");
+	//printk("before return of container unlock\n");
 	return 0;
 }
 
 
 int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 {
-	printk("inside container delete");
+	//printk("inside container delete");
 	mutex_lock(&containerMutex);
 	struct memory_container_cmd* mcontainer;
 	mcontainer = kmalloc(sizeof(struct memory_container_cmd), GFP_KERNEL);
@@ -369,39 +369,39 @@ int memory_container_delete(struct memory_container_cmd __user *user_cmd)
 	struct Container* containerOfTask = getContainerOfTask(current->pid);
 	int n = deleteTaskFromContainer(current->pid, containerOfTask);
 	if(checkIfEmptyContainer(containerOfTask) == 1){
-		printk("inside if of container delete\n");
+		//printk("inside if of container delete\n");
 		deleteContainer(mcontainer->cid);
 	}
 	mutex_unlock(&containerMutex);
-	printk("before return of container delete\n");
+	//printk("before return of container delete\n");
 	return 0;
 }
 
 
 int memory_container_create(struct memory_container_cmd __user *user_cmd)
 {
-	printk("Inside container create");
+	//printk("Inside container create");
 	mutex_lock(&containerMutex);
 	struct memory_container_cmd* mcontainer;
 	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
 	long val = copy_from_user(mcontainer, user_cmd, sizeof(struct memory_container_cmd));
 	struct Container* containerExist = checkIfContainerExist(mcontainer->cid);
 	if(containerExist == NULL){
-		printk("inside if of default container create\n");
+		//printk("inside if of default container create\n");
 		containerExist = createContainer(mcontainer->cid);
 		addContainerToList(containerExist);
 	}
 	struct Node* newNode = createNode(current->pid, current);
 	addNodeToContainer(containerExist, newNode);
 	mutex_unlock(&containerMutex);
-	printk("before return of default container create\n");
+	//printk("before return of default container create\n");
     	return 0;
 }
 
 
 int memory_container_free(struct memory_container_cmd __user *user_cmd)
 {
-	printk("inside container free");
+	//printk("inside container free");
 	mutex_lock(&containerMutex);
 	struct memory_container_cmd* mcontainer;
 	mcontainer = kmalloc(sizeof(struct memory_container_cmd),GFP_KERNEL);
@@ -409,7 +409,7 @@ int memory_container_free(struct memory_container_cmd __user *user_cmd)
 	struct Container* memoryContainer = getContainerOfTask(current->pid);
 	removeObject(memoryContainer, mcontainer->oid);
 	mutex_unlock(&containerMutex);
-	printk("before return of container free\n");
+	//printk("before return of container free\n");
 	return 0;
 }
 
